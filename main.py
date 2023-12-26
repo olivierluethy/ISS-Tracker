@@ -1,36 +1,41 @@
 import requests
-import datetime
 import pytz
-import ephem
-from geopy.geocoders import Nominatim
+import matplotlib.pyplot as plt
+import cartopy.crs as ccrs
 
-# Fetch TLE data from Celestrak API
-response = requests.get('https://www.celestrak.com/NORAD/elements/stations.txt')
-data = response.content.decode('utf-8').strip().split('\n')
+def wo_ist_die_iss():
+    antwort = requests.get("http://api.open-notify.org/iss-now.json")
+    if antwort.status_code == 200:
+        daten = antwort.json()
+        iss_position = daten["iss_position"]
+        return iss_position
+    else:
+        return None
 
-# Extract TLE data for ISS
-name = data[0].strip()
-line1 = data[1].strip()
-line2 = data[2].strip()
+def iss_karte():
+    iss_position = wo_ist_die_iss()
+    if iss_position:
+        lon = float(iss_position['longitude'])
+        lat = float(iss_position['latitude'])
 
-# Get location from user input
-location_str = input("Enter the location you desire: ")
-geolocator = Nominatim(user_agent="iss_tracker")
-location = geolocator.geocode(location_str)
+        # Create a new figure with a title
+        plt.figure(num='ISS Tracking', facecolor='lightblue')
 
-# Set observer location to user input location
-obs = ephem.Observer()
-obs.lat = str(location.latitude)
-obs.lon = str(location.longitude)
-obs.elevation = int(location.altitude)
+        # Now create your axes
+        ax = plt.axes(projection=ccrs.PlateCarree())
+        ax.stock_img()
 
-# Initialize ISS object with TLE data
-iss = ephem.readtle(name, line1, line2)
+        # Plot your data
+        plt.plot(lon, lat, 'ro', markersize=10, transform=ccrs.Geodetic())
 
-# Calculate next time ISS is visible from user input location
-obs.date = datetime.datetime.utcnow()
-iss.compute(obs)
-tr, azr, tt, altt, ts, azs = obs.next_pass(iss)
-local_time = ephem.localtime(ts)
-duration = int((altt - 0.25) * 24 * 60)
-print("The ISS will be visible from {} on {} for {} minutes".format(location_str, local_time, duration))
+        # Set your title
+        plt.title("Aktuelle Position der ISS")
+
+        # Show your plot
+        plt.show()
+
+    else:
+        print("Fehler beim Abrufen der ISS-Position!")
+
+if __name__ == "__main__":
+    iss_karte()
