@@ -6,10 +6,10 @@ import cartopy.crs as ccrs
 from datetime import datetime
 
 def wo_ist_die_iss():
-    antwort = requests.get("http://api.open-notify.org/iss-now.json")
-    if antwort.status_code == 200:
-        daten = antwort.json()
-        iss_position = daten["iss_position"]
+    response = requests.get("http://api.open-notify.org/iss-now.json")
+    if response.status_code == 200:
+        data = response.json()
+        iss_position = data["iss_position"]
         return iss_position
     else:
         return None
@@ -27,8 +27,6 @@ def checksum(line):
             cksum += int(c)
     cksum %= 10
     return cksum
-
-from datetime import datetime
 
 def berechne_verbleibende_zeit(location_lat, location_lon):
     # TLE set for the ISS from: https://live.ariss.org/tle/
@@ -60,7 +58,10 @@ def berechne_verbleibende_zeit(location_lat, location_lon):
     minutes, seconds = divmod(remainder, 60)
     remaining_time_str = f"{hours} hours, {minutes} minutes, {seconds} seconds"
     
-    return remaining_time_str
+    # Get the exact time the ISS will be visible
+    exact_time_str = rise_time.strftime("%I:%M %p")
+    
+    return remaining_time_str, exact_time_str
 
 def iss_karte(location_lat, location_lon):
     iss_position = wo_ist_die_iss()
@@ -69,7 +70,7 @@ def iss_karte(location_lat, location_lon):
         lat = float(iss_position['latitude'])
 
         # Calculate the time until ISS reaches the specific location
-        remaining_time = berechne_verbleibende_zeit(location_lat, location_lon)
+        remaining_time, exact_time = berechne_verbleibende_zeit(location_lat, location_lon)
 
         # Create a new figure with a title
         plt.figure(num='ISS Tracking', facecolor='lightblue')
@@ -82,17 +83,17 @@ def iss_karte(location_lat, location_lon):
         plt.plot(lon, lat, 'ro', markersize=10, transform=ccrs.Geodetic())
 
         # Set your title
-        plt.title(f"Aktuelle Position der ISS\nVerbleibende Zeit bis zur Ankunft: {remaining_time}")
+        plt.title(f"Current ISS Position\nRemaining time: {remaining_time}\nVisible at: {exact_time}")
 
         # Show your plot
         plt.show()
 
     else:
-        print("Fehler beim Abrufen der ISS-Position!")
+        print("Error retrieving ISS position!")
 
 def dms_to_dd(degrees, minutes, seconds, direction):
-    dd = float(degrees) + float(minutes)/60 + float(seconds)/(60*60);
-    if direction == 'S' or direction == 'W':
+    dd = float(degrees) + float(minutes) / 60 + float(seconds) / (60 * 60)
+    if direction in ['S', 'W']:
         dd *= -1
     return dd
 
